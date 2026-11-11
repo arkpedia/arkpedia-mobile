@@ -7,7 +7,11 @@ import WebKit
 public class ArkpediaAuthPlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenticationPresentationContextProviding, URLSessionTaskDelegate {
     public let identifier = "ArkpediaAuthPlugin"
     public let jsName = "ArkpediaAuth"
-    public let pluginMethods = ["prepare", "open", "cancel"].map { CAPPluginMethod(name: $0, returnType: CAPPluginReturnPromise) }
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "prepare", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "open", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "cancel", returnType: CAPPluginReturnPromise)
+    ]
     private let origin = "https://www.arkpedia.net"
     private var verifier: String?
     private var state: String?
