@@ -9,6 +9,7 @@ public class ArkpediaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "ArkpediaAudio"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "getState", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getSpectrum", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "configure", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadTrack", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "command", returnType: CAPPluginReturnPromise)
@@ -32,6 +33,14 @@ public class ArkpediaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
     @objc func getState(_ call: CAPPluginCall) { run(call) { _, _ in } }
+    @objc func getSpectrum(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            guard let url = self.bridge?.webView?.url, url.scheme == "https", url.host == "www.arkpedia.net", url.port == nil || url.port == 443 else {
+                call.reject("Audio is available only to Arkpedia production"); return
+            }
+            call.resolve(NativeAudio.shared.spectrum())
+        }
+    }
     @objc func configure(_ call: CAPPluginCall) { run(call) { audio, data in audio.configure(data) } }
     @objc func loadTrack(_ call: CAPPluginCall) { run(call) { audio, data in try audio.load(data) } }
     @objc func command(_ call: CAPPluginCall) { run(call) { audio, data in try audio.command(data) } }
@@ -58,6 +67,8 @@ final class NativeAudio {
     private var observers: [NSObjectProtocol] = []
     private var wasPlaying = false
     private var generation = 0
+    private var capture: NativeSpectrumCapture?
+    private let analyzer = SpectrumAnalyzer()
     private var id: String { current?["id"] as? String ?? "" }
 
     private init() {
@@ -78,7 +89,7 @@ final class NativeAudio {
         observers.append(NotificationCenter.default.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] event in
             guard let self, let kind = event.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt else { return }
             if kind == AVAudioSession.InterruptionType.began.rawValue {
-                self.wasPlaying = self.player.rate > 0; self.player.pause()
+                self.wasPlaying = self.player.rate > 0; self.player.pause(); self.capture?.reset()
             } else if self.wasPlaying,
                       let raw = event.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt,
                       AVAudioSession.InterruptionOptions(rawValue: raw).contains(.shouldResume) {
@@ -139,6 +150,23 @@ final class NativeAudio {
         generation += 1; let request = generation
         current = track; error = ""; artwork = nil
         let item = AVPlayerItem(url: URL(string: "https://www.arkpedia.net/api/music-audio/\(cid)")!)
+        let capture = NativeSpectrumCapture()
+        self.capture = capture
+        // A remote MP3 is an AVURLAsset, not an HLS stream. Install its audio tap
+        // once the track is known; loading analysis never delays or starts playback.
+        Task { [weak self, weak item] in
+            guard let item else { return }
+            guard let audioTrack = try? await item.asset.loadTracks(withMediaType: .audio).first else { return }
+            await MainActor.run {
+                guard let self, self.generation == request, self.player.currentItem === item,
+                      let tap = capture.tap() else { return }
+                let parameters = AVMutableAudioMixInputParameters(track: audioTrack)
+                parameters.audioTapProcessor = tap
+                let mix = AVMutableAudioMix()
+                mix.inputParameters = [parameters]
+                item.audioMix = mix
+            }
+        }
         itemStatus = item.observe(\.status, options: [.new]) { [weak self] item, _ in
             DispatchQueue.main.async {
                 guard let self, self.generation == request else { return }
@@ -182,12 +210,14 @@ final class NativeAudio {
         case "play":
             if let current, player.currentItem?.status == .failed { try play(current, seconds: finite(player.currentTime().seconds), start: true) }
             else { try AVAudioSession.sharedInstance().setActive(true); player.play() }
-        case "pause": player.pause()
+        case "pause": player.pause(); capture?.reset()
         case "stop":
-            generation += 1; player.pause(); player.replaceCurrentItem(with: nil); current = nil; tracks = []
+            generation += 1; player.pause(); player.replaceCurrentItem(with: nil); current = nil; tracks = []; capture = nil
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        case "seek": player.seek(to: CMTime(seconds: max(0, finite(data["seconds"] as? Double ?? 0)), preferredTimescale: 600))
+        case "seek":
+            capture?.reset()
+            player.seek(to: CMTime(seconds: max(0, finite(data["seconds"] as? Double ?? 0)), preferredTimescale: 600))
         case "volume": player.volume = Float(min(1, max(0, data["volume"] as? Double ?? 1)))
         case "next": advance(1)
         case "previous": advance(-1)
@@ -211,6 +241,14 @@ final class NativeAudio {
         UserDefaults.standard.set(["favourites": favourites, "blocked": blocked, "changes": changes, "revision": revision], forKey: "nativeAudioPreferences")
     }
     private func finite(_ number: Double) -> Double { number.isFinite ? max(0, number) : 0 }
+    func spectrum() -> [String: Any] {
+        guard UIApplication.shared.applicationState == .active, player.timeControlStatus == .playing,
+              let analyzer, let samples = capture?.snapshot(at: player.currentTime().seconds) else {
+            return ["trackId": id, "available": false, "bands": []]
+        }
+        return ["trackId": id, "available": true,
+                "bands": analyzer.levels(channels: samples.channels, sampleRate: samples.sampleRate)]
+    }
     func state() -> [String: Any] {
         sequence += 1
         return ["version": 1, "sequence": sequence, "sessionId": sessionId, "track": current as Any? ?? NSNull(), "seconds": finite(player.currentTime().seconds),

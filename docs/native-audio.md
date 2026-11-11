@@ -1,4 +1,4 @@
-# Background playback and lock-screen controls (0.3)
+# Background playback and lock-screen controls (0.3.1)
 
 This app release pairs with the native-audio adapter in `arkpedia/arkpedia`.
 Older website releases still use the web player; the mobile bridge alone does not
@@ -43,8 +43,17 @@ increasing revision. Website snapshots older than that revision cannot overwrite
 them. The website applies edits to its existing local storage and acknowledges
 them on its next configuration. Per-session sequence numbers reject delayed
 playback responses. Returning to the page or reloading reconciles the current
-native song and position instead of starting another stream. The native player
-does not supply browser Web Audio samples for the spectrum visualization.
+native song and position instead of starting another stream. On iOS 0.3.1+, an optional `getSpectrum` method supplies 48 real frequency-band
+levels to the foreground website. A pass-through AVPlayer audio tap copies PCM
+into bounded buffers; FFT work runs outside the audio callback and uses separate
+stereo channels. Analysis stops when the page no longer requests it, and stale or
+wrong-track samples are not displayed. The existing player remains the only audio
+stream. Android and older iOS builds report spectrum unavailable; YouTube does
+not expose samples. Pause, seek, interruptions and track changes clear the capture.
+
+The iOS build also runs generated-tone tests for frequency placement, calibrated
+dBFS, silence, anti-phase stereo, planar/interleaved PCM, stale seek data and reset.
+These tests and an archive do not replace a physical iPhone listening test.
 
 ## Validation and distribution
 

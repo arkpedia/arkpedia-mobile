@@ -1,6 +1,6 @@
 # Arkpedia Mobile
 
-This private repository contains Android/iOS wrappers for the production website.
+This public repository contains Android/iOS wrappers for the production website.
 Use `https://www.arkpedia.net` only; do not point builds at Preview or retired hosts.
 Do not copy the website's server, private account data, or deployment credentials.
 

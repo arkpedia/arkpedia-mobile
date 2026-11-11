@@ -1,6 +1,6 @@
 # Arkpedia Mobile
 
-Android and iOS shells for **https://www.arkpedia.net**, maintained in the private
+Android and iOS shells for **https://www.arkpedia.net**, maintained in the public
 `arkpedia/arkpedia-mobile` repository. Both platforms use Capacitor 8.6.0 and the
 application identifier `net.arkpedia.mobile`.
 
@@ -13,7 +13,7 @@ page offers a retry.
 
 Open [Actions → Mobile builds](https://github.com/arkpedia/arkpedia-mobile/actions/workflows/build.yml),
 select a successful run for `main`, and download its artifacts while signed into
-GitHub with repository access. They expire after 14 days; **Run workflow** creates
+GitHub. They expire after 14 days; **Run workflow** creates
 fresh builds.
 
 | Artifact | Contents | Installation |
