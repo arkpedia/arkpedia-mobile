@@ -55,6 +55,7 @@ final class NativeAudio {
     private var wasPlaying = false
     private var generation = 0
     private var activityStateKey = ""
+    private var activityUpdate: Task<Void, Never>?
     private var id: String { current?["id"] as? String ?? "" }
 
     private init() {
@@ -90,21 +91,22 @@ final class NativeAudio {
         remote.playCommand.addTarget { [weak self] _ in self?.remote("play") ?? .commandFailed }
         remote.pauseCommand.addTarget { [weak self] _ in self?.remote("pause") ?? .commandFailed }
         remote.togglePlayPauseCommand.addTarget { [weak self] _ in
-            guard let self else { return .commandFailed }; return self.remote(self.player.rate > 0 ? "pause" : "play")
+            self?.remote("toggle") ?? .commandFailed
         }
         remote.nextTrackCommand.addTarget { [weak self] _ in self?.remote("next") ?? .commandFailed }
         remote.previousTrackCommand.addTarget { [weak self] _ in self?.remote("previous") ?? .commandFailed }
         remote.changePlaybackPositionCommand.addTarget { [weak self] event in
             guard let self, let event = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
-            try? self.command(["action": "seek", "seconds": event.positionTime]); return .success
+            return self.remote("seek", seconds: event.positionTime)
         }
         remote.likeCommand.addTarget { [weak self] _ in self?.remote("favourite") ?? .commandFailed }
         remote.dislikeCommand.addTarget { [weak self] _ in self?.remote("block") ?? .commandFailed }
     }
-    private func remote(_ action: String) -> MPRemoteCommandHandlerStatus {
-        if !Thread.isMainThread { return DispatchQueue.main.sync { self.remote(action) } }
+    private func remote(_ action: String, seconds: Double = 0) -> MPRemoteCommandHandlerStatus {
+        if !Thread.isMainThread { return DispatchQueue.main.sync { self.remote(action, seconds: seconds) } }
         guard current != nil else { return .noSuchContent }
-        do { try command(["action": action]); return .success } catch { return .commandFailed }
+        let resolved = action == "toggle" ? (player.rate > 0 ? "pause" : "play") : action
+        do { try command(["action": resolved, "seconds": seconds]); return .success } catch { return .commandFailed }
     }
     private func valid(_ track: [String: Any]) -> Bool {
         guard let id = track["id"] as? String, !id.isEmpty, id.count < 150,
@@ -142,6 +144,7 @@ final class NativeAudio {
                 self.emit()
             }
         }
+        player.pause()
         player.replaceCurrentItem(with: item)
         if seconds.isFinite && seconds > 0 { player.seek(to: CMTime(seconds: seconds, preferredTimescale: 600)) }
         if start { player.play() }
@@ -237,23 +240,32 @@ final class NativeAudio {
         // Do not stream position ticks into ActivityKit; the system Now Playing panel owns
         // the transport. This companion only publishes track and preference changes.
         guard key != activityStateKey else { return }
-        if current == nil {
-            activityStateKey = key
-            Task { for activity in Activity<PlayerActivity>.activities { await activity.end(nil, dismissalPolicy: .immediate) } }
-            return
+        let content = current.map { current in
+            ActivityContent(state: PlayerActivity.ContentState(trackId: id, title: current["title"] as? String ?? "Arkpedia",
+                favourite: favourites[id] == true, blocked: blocked[id] == true), staleDate: nil)
         }
-        let content = ActivityContent(state: PlayerActivity.ContentState(trackId: id, title: current?["title"] as? String ?? "Arkpedia",
-            favourite: favourites[id] == true, blocked: blocked[id] == true), staleDate: nil)
-        if Activity<PlayerActivity>.activities.isEmpty {
-            // ActivityKit allows a local start only while the app is in the foreground.
-            guard UIApplication.shared.applicationState == .active,
-                  ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-            do { _ = try Activity.request(attributes: PlayerActivity(), content: content); activityStateKey = key }
-            catch { /* Standard Now Playing controls remain available if Live Activities are disabled. */ }
-        } else {
-            activityStateKey = key
-            Task { for activity in Activity<PlayerActivity>.activities { await activity.update(content) } }
+        activityStateKey = key
+        let previous = activityUpdate
+        // Serialize changes, including stop/start, so a delayed update cannot restore stale
+        // buttons or update a card that an earlier stop is still dismissing.
+        activityUpdate = Task { @MainActor in
+            await previous?.value
+            guard let content else {
+                for activity in Activity<PlayerActivity>.activities { await activity.end(nil, dismissalPolicy: .immediate) }
+                return
+            }
+            if Activity<PlayerActivity>.activities.isEmpty {
+                guard UIApplication.shared.applicationState == .active,
+                      ActivityAuthorizationInfo().areActivitiesEnabled else {
+                    if self.activityStateKey == key { self.activityStateKey = "" }; return
+                }
+                do { _ = try Activity.request(attributes: PlayerActivity(), content: content) }
+                catch { if self.activityStateKey == key { self.activityStateKey = "" } }
+            } else {
+                for activity in Activity<PlayerActivity>.activities { await activity.update(content) }
+            }
         }
     }
+
     private func failure(_ message: String) -> NSError { NSError(domain: "ArkpediaAudio", code: 1, userInfo: [NSLocalizedDescriptionKey: message]) }
 }
