@@ -133,7 +133,7 @@ final class NativeAudio {
     private func play(_ track: [String: Any], seconds: Double, start: Bool) throws {
         guard let cid = track["cid"] as? String, valid(track) else { throw failure("Invalid track") }
         try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-        try AVAudioSession.sharedInstance().setActive(true)
+        if start { try AVAudioSession.sharedInstance().setActive(true) }
         generation += 1; let request = generation
         current = track; error = ""; artwork = nil
         let item = AVPlayerItem(url: URL(string: "https://www.arkpedia.net/api/music-audio/\(cid)")!)
