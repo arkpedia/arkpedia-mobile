@@ -86,10 +86,10 @@ final class NativeSpectrumCapture {
                 Unmanaged<NativeSpectrumCapture>.fromOpaque(MTAudioProcessingTapGetStorage(tap)).takeUnretainedValue()
                     .receive(buffers, frames: Int(outputFrames.pointee), range: range)
             })
-        var tap: Unmanaged<MTAudioProcessingTap>?
+        var tap: MTAudioProcessingTap?
         guard MTAudioProcessingTapCreate(kCFAllocatorDefault, &callbacks, kMTAudioProcessingTapCreationFlag_PostEffects, &tap) == noErr else {
             retained.release(); return nil
         }
-        return tap?.takeRetainedValue()
+        return tap
     }
 }
