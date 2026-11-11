@@ -71,10 +71,9 @@ npm run sync:ios
 npm run open:ios
 ```
 
-1. In Xcode, select the **App** and **ArkpediaControls** targets, then **Signing & Capabilities**. Select your
-   Apple team and enable automatic signing. Register `net.arkpedia.mobile` with that
-   team, and register `net.arkpedia.mobile.controls` for the companion extension,
-   or update both identifiers consistently if they are unavailable.
+1. In Xcode, select the **App** target, then **Signing & Capabilities**. Select your
+   Apple team and enable automatic signing for `net.arkpedia.mobile`. There is no
+   widget extension to sign.
 2. Increase Version/Build as needed. Select a generic iOS device destination and
    choose **Product → Archive**.
 3. In Organizer, choose **Distribute App** and the appropriate method. Export the
@@ -94,10 +93,13 @@ trusted, do not broaden `allowNavigation`, and review any future native plugin.
 The app includes a first-party `ArkpediaAudio` bridge. See [native playback](docs/native-audio.md)
 for its origin restriction, synchronization contract and remaining device checks.
 
-External navigation uses Capacitor's default browser handling. Google/Discord OAuth
-needs a real-device check: embedded browsers may reject sign-in, and system-browser
-sessions do not automatically transfer into the app. No native OAuth handoff or
-deep-link login callback is implemented. Native background music, file import/export,
+Google/Discord sign-in uses the system authentication browser, then a one-time,
+proof-protected handoff imports the session into the WebView. See
+[account sign-in](docs/native-auth.md). This uses the fixed `net.arkpedia.mobile`
+callback scheme, not associated-domain entitlements, and supports Sideloadly signing.
+Install `Arkpedia-unsigned.ipa` through Sideloadly; the file itself is unsigned.
+Keep the same signing identity/bundle identifier when updating to retain app data.
+Real-device OAuth, native background music, file import/export,
 downloads, and pop-up behavior also need device verification. Store approval is not
 established by a successful build; the current app retains the template launcher
 and splash artwork pending branded assets.

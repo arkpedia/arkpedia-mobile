@@ -17,10 +17,8 @@
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
-		B850DB89F9B843BD8260C223 /* ArkpediaControls.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = 0F99DFA0AD624A33898E1434 /* ArkpediaControls.appex */; };
-		67AA3A1FAB5D4A179A7338B0 /* ArkpediaControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1905D6323B6C4742BA9B8E66 /* ArkpediaControls.swift */; };
 		4A180DD5B00D4DEC91E2947C /* PlayerActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DD05F04703448CFBF3A282B /* PlayerActivity.swift */; };
-		3C2AB41AD27D41A3B9AC2AD4 /* PlayerActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DD05F04703448CFBF3A282B /* PlayerActivity.swift */; };
+		E893F15FA57847ED979E3AAA /* ArkpediaAuthPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E417AB3B9A6F47DE908F3E63 /* ArkpediaAuthPlugin.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,9 +34,8 @@
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
-		0F99DFA0AD624A33898E1434 /* ArkpediaControls.appex */ = {isa = PBXFileReference; name = "ArkpediaControls.appex"; path = "ArkpediaControls.appex"; sourceTree = BUILT_PRODUCTS_DIR; fileEncoding = undefined; lastKnownFileType = undefined; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; };
-		1905D6323B6C4742BA9B8E66 /* ArkpediaControls.swift */ = {isa = PBXFileReference; name = "ArkpediaControls.swift"; path = "ArkpediaControls.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 		0DD05F04703448CFBF3A282B /* PlayerActivity.swift */ = {isa = PBXFileReference; name = "PlayerActivity.swift"; path = "PlayerActivity.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		E417AB3B9A6F47DE908F3E63 /* ArkpediaAuthPlugin.swift */ = {isa = PBXFileReference; name = "ArkpediaAuthPlugin.swift"; path = "ArkpediaAuthPlugin.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -47,13 +44,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		1CAF5C1A9D084358862B3D6B /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -66,7 +56,6 @@
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
 				504EC3051FED79650016851F /* Products */,
-				A367F183E31A473295D5A54C /* ArkpediaControls */,
 			);
 			sourceTree = "<group>";
 		};
@@ -74,7 +63,6 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
-				0F99DFA0AD624A33898E1434 /* ArkpediaControls.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -93,17 +81,9 @@
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
 				0DD05F04703448CFBF3A282B /* PlayerActivity.swift */,
+				E417AB3B9A6F47DE908F3E63 /* ArkpediaAuthPlugin.swift */,
 			);
 			path = App;
-			sourceTree = "<group>";
-		};
-		A367F183E31A473295D5A54C /* ArkpediaControls */ = {
-			isa = PBXGroup;
-			children = (
-				1905D6323B6C4742BA9B8E66 /* ArkpediaControls.swift */,
-			);
-			name = ArkpediaControls;
-			path = ArkpediaControls;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -116,7 +96,6 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
-				4A82FC6F6F43463A9AB87E4B /* Copy Files */,
 			);
 			buildRules = (
 			);
@@ -129,22 +108,6 @@
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
-		};
-		69FB8873FD8F451FA02F1D12 /* "ArkpediaControls" */ = {
-			isa = PBXNativeTarget;
-			name = "ArkpediaControls";
-			productName = "ArkpediaControls";
-			productReference = 0F99DFA0AD624A33898E1434;
-			productType = "com.apple.product-type.app-extension";
-			buildConfigurationList = 71E71032A99C4E28871D8EDF;
-			buildPhases = (
-				37E5703DFDE5416BB371BFCA /* Sources */,
-				1CAF5C1A9D084358862B3D6B /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
 		};
 /* End PBXNativeTarget section */
 
@@ -179,7 +142,6 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
-				69FB8873FD8F451FA02F1D12 /* "ArkpediaControls" */,
 			);
 		};
 /* End PBXProject section */
@@ -209,15 +171,7 @@
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
 				4A180DD5B00D4DEC91E2947C /* PlayerActivity.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		37E5703DFDE5416BB371BFCA /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				67AA3A1FAB5D4A179A7338B0 /* ArkpediaControls.swift in Sources */,
-				3C2AB41AD27D41A3B9AC2AD4 /* PlayerActivity.swift in Sources */,
+				E893F15FA57847ED979E3AAA /* ArkpediaAuthPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -358,14 +312,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.3.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = net.arkpedia.mobile;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -380,14 +334,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.arkpedia.mobile;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
@@ -395,50 +349,6 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
-		};
-		ACA2CD0B69594E09A19DFA8F /* Debug */ = {
-			name = Debug;
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = ArkpediaControls/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				PRODUCT_NAME = "ArkpediaControls";
-				SKIP_INSTALL = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "net.arkpedia.mobile.controls";
-				SWIFT_VERSION = 5.0;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) WIDGET_EXTENSION";
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = NO;
-				MARKETING_VERSION = 0.2.0;
-				CURRENT_PROJECT_VERSION = 2;
-			};
-		};
-		8E94777B6BD242698D22E8B1 /* Release */ = {
-			name = Release;
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				INFOPLIST_FILE = ArkpediaControls/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				PRODUCT_NAME = "ArkpediaControls";
-				SKIP_INSTALL = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "net.arkpedia.mobile.controls";
-				SWIFT_VERSION = 5.0;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) WIDGET_EXTENSION";
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = NO;
-				MARKETING_VERSION = 0.2.0;
-				CURRENT_PROJECT_VERSION = 2;
-			};
 		};
 /* End XCBuildConfiguration section */
 
@@ -461,15 +371,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		71E71032A99C4E28871D8EDF /* Build configuration list for PBXNativeTarget "ArkpediaControls" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				ACA2CD0B69594E09A19DFA8F /* Debug */,
-				8E94777B6BD242698D22E8B1 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -488,17 +389,6 @@
 /* End XCSwiftPackageProductDependency section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		4A82FC6F6F43463A9AB87E4B /* Copy Files */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				B850DB89F9B843BD8260C223 /* ArkpediaControls.appex in Copy Files */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			name = "Copy Files";
-			dstPath = "";
-			dstSubfolderSpec = 13;
-		};
 /* End PBXCopyFilesBuildPhase section */
 	};
 	rootObject = 504EC2FC1FED79650016851F /* Project object */;
