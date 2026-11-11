@@ -30,6 +30,8 @@ public class AudioService extends MediaSessionService {
     private String repeat = "off";
     private JSONObject favourites = new JSONObject(), blocked = new JSONObject(), changes = new JSONObject();
     private long revision;
+    private long sequence;
+    private final String sessionId = UUID.randomUUID().toString();
     private String error = "";
     private final Runnable tick = new Runnable() {
         public void run() { emit(); handler.postDelayed(this, 1000); }
@@ -81,10 +83,10 @@ public class AudioService extends MediaSessionService {
                         .setAvailableSessionCommands(MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon().add(HEART).add(BLOCK).build()).build();
                 }
                 @Override public ListenableFuture<SessionResult> onCustomCommand(MediaSession s, MediaSession.ControllerInfo controller, SessionCommand command, Bundle args) {
-                    if (current == null) return Futures.immediateFuture(new SessionResult(SessionResult.RESULT_ERROR_INVALID_STATE));
+                    if (current == null) return Futures.immediateFuture(new SessionResult(SessionError.ERROR_INVALID_STATE));
                     if (command.equals(HEART)) preference("favourites");
                     else if (command.equals(BLOCK)) preference("blocked");
-                    else return Futures.immediateFuture(new SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED));
+                    else return Futures.immediateFuture(new SessionResult(SessionError.ERROR_NOT_SUPPORTED));
                     return Futures.immediateFuture(new SessionResult(SessionResult.RESULT_SUCCESS));
                 }
             }).build();
@@ -189,6 +191,7 @@ public class AudioService extends MediaSessionService {
     JSObject state() {
         JSObject result = new JSObject();
         result.put("version", 1); result.put("track", current == null ? JSONObject.NULL : current);
+        result.put("sequence", ++sequence); result.put("sessionId", sessionId);
         result.put("seconds", player == null ? 0 : player.getCurrentPosition()/1000.0);
         result.put("duration", player == null || player.getDuration() == C.TIME_UNSET ? 0 : player.getDuration()/1000.0);
         result.put("playing", player != null && player.isPlaying());

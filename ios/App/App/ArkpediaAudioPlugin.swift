@@ -1,6 +1,7 @@
 import AVFoundation
 import MediaPlayer
 import Capacitor
+import ActivityKit
 
 @objc(ArkpediaAudioPlugin)
 public class ArkpediaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
@@ -43,6 +44,8 @@ final class NativeAudio {
     private var favourites: [String: Bool] = [:], blocked: [String: Bool] = [:]
     private var changes: [String: [String: Any]] = [:]
     private var revision = 0
+    private var sequence = 0
+    private let sessionId = UUID().uuidString
     private var error = ""
     private var artwork: MPMediaItemArtwork?
     private var clock: Any?
@@ -51,6 +54,7 @@ final class NativeAudio {
     private var observers: [NSObjectProtocol] = []
     private var wasPlaying = false
     private var generation = 0
+    private var activityStateKey = ""
     private var id: String { current?["id"] as? String ?? "" }
 
     private init() {
@@ -98,6 +102,7 @@ final class NativeAudio {
         remote.dislikeCommand.addTarget { [weak self] _ in self?.remote("block") ?? .commandFailed }
     }
     private func remote(_ action: String) -> MPRemoteCommandHandlerStatus {
+        if !Thread.isMainThread { return DispatchQueue.main.sync { self.remote(action) } }
         guard current != nil else { return .noSuchContent }
         do { try command(["action": action]); return .success } catch { return .commandFailed }
     }
@@ -187,7 +192,8 @@ final class NativeAudio {
         }
         emit()
     }
-    func preference(_ kind: String) {
+    func preference(_ kind: String, expectedId: String? = nil) {
+        if let expectedId, expectedId != id { return }
         guard !id.isEmpty else { return }
         let value: Bool
         if kind == "favourites" { value = !(favourites[id] ?? false); favourites[id] = value }
@@ -201,7 +207,8 @@ final class NativeAudio {
     }
     private func finite(_ number: Double) -> Double { number.isFinite ? max(0, number) : 0 }
     func state() -> [String: Any] {
-        ["version": 1, "track": current as Any? ?? NSNull(), "seconds": finite(player.currentTime().seconds),
+        sequence += 1
+        return ["version": 1, "sequence": sequence, "sessionId": sessionId, "track": current as Any? ?? NSNull(), "seconds": finite(player.currentTime().seconds),
          "duration": finite(player.currentItem?.duration.seconds ?? 0), "playing": player.timeControlStatus == .playing,
          "buffering": player.timeControlStatus == .waitingToPlayAtSpecifiedRate, "revision": revision, "changes": changes, "error": error]
     }
@@ -221,7 +228,32 @@ final class NativeAudio {
         remote.likeCommand.localizedTitle = favourites[id] == true ? "Unfavourite" : "Favourite"
         remote.dislikeCommand.isEnabled = current != nil; remote.dislikeCommand.isActive = blocked[id] == true
         remote.dislikeCommand.localizedTitle = blocked[id] == true ? "Allow autoplay" : "Block from autoplay"
+        updateActivity()
         changed?(state())
+    }
+    private func updateActivity() {
+        guard #available(iOS 17.0, *) else { return }
+        let key = "\(id):\(favourites[id] == true):\(blocked[id] == true)"
+        // Do not stream position ticks into ActivityKit; the system Now Playing panel owns
+        // the transport. This companion only publishes track and preference changes.
+        guard key != activityStateKey else { return }
+        if current == nil {
+            activityStateKey = key
+            Task { for activity in Activity<PlayerActivity>.activities { await activity.end(nil, dismissalPolicy: .immediate) } }
+            return
+        }
+        let content = ActivityContent(state: PlayerActivity.ContentState(trackId: id, title: current?["title"] as? String ?? "Arkpedia",
+            favourite: favourites[id] == true, blocked: blocked[id] == true), staleDate: nil)
+        if Activity<PlayerActivity>.activities.isEmpty {
+            // ActivityKit allows a local start only while the app is in the foreground.
+            guard UIApplication.shared.applicationState == .active,
+                  ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+            do { _ = try Activity.request(attributes: PlayerActivity(), content: content); activityStateKey = key }
+            catch { /* Standard Now Playing controls remain available if Live Activities are disabled. */ }
+        } else {
+            activityStateKey = key
+            Task { for activity in Activity<PlayerActivity>.activities { await activity.update(content) } }
+        }
     }
     private func failure(_ message: String) -> NSError { NSError(domain: "ArkpediaAudio", code: 1, userInfo: [NSLocalizedDescriptionKey: message]) }
 }
