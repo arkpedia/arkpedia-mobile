@@ -9,6 +9,8 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>CFBundleURLTypes</key>
+    <array><dict><key>CFBundleURLSchemes</key><array><string>net.arkpedia.mobile</string></array><key>CFBundleURLRole</key><string>Editor</string></dict></array>
 	<key>CFBundleDisplayName</key>
         <string>Arkpedia</string>
 	<key>CFBundleExecutable</key>
