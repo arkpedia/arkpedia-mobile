@@ -1,0 +1,19 @@
+{
+  "appId": "net.arkpedia.mobile",
+  "appName": "Arkpedia",
+  "webDir": "www",
+  "server": {
+    "url": "https://www.arkpedia.net",
+    "cleartext": false,
+    "errorPath": "offline.html"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "preferredContentMode": "mobile",
+    "allowsLinkPreview": false
+  }
+}

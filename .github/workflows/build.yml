@@ -1,0 +1,96 @@
+name: Mobile builds
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - run: npm run check
+      - run: npm run sync:android
+      - name: Build and lint Android
+        working-directory: android
+        run: ./gradlew --no-daemon assembleDebug lintDebug
+      - name: Name APK
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/Arkpedia-debug.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arkpedia-android-debug-apk
+          path: dist/Arkpedia-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  ios:
+    name: iOS unsigned IPA
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - run: npm ci
+      - run: npm run check
+      - run: npm run sync:ios
+      - name: Archive without signing
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Arkpedia.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY='' \
+            | tee "$RUNNER_TEMP/xcodebuild.log"
+      - name: Package unsigned IPA for later signing
+        run: |
+          mkdir -p dist/ipa/Payload
+          ditto "$RUNNER_TEMP/Arkpedia.xcarchive/Products/Applications/App.app" dist/ipa/Payload/Arkpedia.app
+          cd dist/ipa
+          zip -qr ../Arkpedia-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arkpedia-ios-unsigned-ipa
+          path: dist/Arkpedia-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload Xcode log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: ${{ runner.temp }}/xcodebuild.log
+          if-no-files-found: ignore
+          retention-days: 7
