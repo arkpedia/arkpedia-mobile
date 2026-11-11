@@ -14,6 +14,10 @@ public class ArkpediaAudioPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "command", returnType: CAPPluginReturnPromise)
     ]
     public override func load() {
+        // Dismiss a companion card left by 0.2.0. New versions use only Apple's player.
+        if #available(iOS 17.0, *) {
+            Task { for activity in Activity<PlayerActivity>.activities { await activity.end(nil, dismissalPolicy: .immediate) } }
+        }
         NativeAudio.shared.changed = { [weak self] state in self?.notifyListeners("state", data: state) }
     }
     private func run(_ call: CAPPluginCall, _ action: @escaping (NativeAudio, [String: Any]) throws -> Void) {
@@ -54,8 +58,6 @@ final class NativeAudio {
     private var observers: [NSObjectProtocol] = []
     private var wasPlaying = false
     private var generation = 0
-    private var activityStateKey = ""
-    private var activityUpdate: Task<Void, Never>?
     private var id: String { current?["id"] as? String ?? "" }
 
     private init() {
@@ -231,41 +233,7 @@ final class NativeAudio {
         remote.likeCommand.localizedTitle = favourites[id] == true ? "Unfavourite" : "Favourite"
         remote.dislikeCommand.isEnabled = current != nil; remote.dislikeCommand.isActive = blocked[id] == true
         remote.dislikeCommand.localizedTitle = blocked[id] == true ? "Allow autoplay" : "Block from autoplay"
-        updateActivity()
         changed?(state())
     }
-    private func updateActivity() {
-        guard #available(iOS 17.0, *) else { return }
-        let key = "\(id):\(favourites[id] == true):\(blocked[id] == true)"
-        // Do not stream position ticks into ActivityKit; the system Now Playing panel owns
-        // the transport. This companion only publishes track and preference changes.
-        guard key != activityStateKey else { return }
-        let content = current.map { current in
-            ActivityContent(state: PlayerActivity.ContentState(trackId: id, title: current["title"] as? String ?? "Arkpedia",
-                favourite: favourites[id] == true, blocked: blocked[id] == true), staleDate: nil)
-        }
-        activityStateKey = key
-        let previous = activityUpdate
-        // Serialize changes, including stop/start, so a delayed update cannot restore stale
-        // buttons or update a card that an earlier stop is still dismissing.
-        activityUpdate = Task { @MainActor in
-            await previous?.value
-            guard let content else {
-                for activity in Activity<PlayerActivity>.activities { await activity.end(nil, dismissalPolicy: .immediate) }
-                return
-            }
-            if Activity<PlayerActivity>.activities.isEmpty {
-                guard UIApplication.shared.applicationState == .active,
-                      ActivityAuthorizationInfo().areActivitiesEnabled else {
-                    if self.activityStateKey == key { self.activityStateKey = "" }; return
-                }
-                do { _ = try Activity.request(attributes: PlayerActivity(), content: content) }
-                catch { if self.activityStateKey == key { self.activityStateKey = "" } }
-            } else {
-                for activity in Activity<PlayerActivity>.activities { await activity.update(content) }
-            }
-        }
-    }
-
     private func failure(_ message: String) -> NSError { NSError(domain: "ArkpediaAudio", code: 1, userInfo: [NSLocalizedDescriptionKey: message]) }
 }

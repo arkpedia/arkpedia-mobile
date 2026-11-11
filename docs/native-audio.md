@@ -1,4 +1,4 @@
-# Background playback and lock-screen controls (0.2)
+# Background playback and lock-screen controls (0.3)
 
 This app release pairs with the native-audio adapter in `arkpedia/arkpedia`.
 Older website releases still use the web player; the mobile bridge alone does not
@@ -12,11 +12,12 @@ and headphone disconnection are handled natively.
 
 iOS uses AVPlayer with the playback audio session and audio background mode. Now
 Playing exposes metadata, album artwork, timeline and supported remote commands.
-An iOS 17+ Live Activity adds explicit Heart and Block buttons beside the standard
-system player. Live Activities must be enabled, have system-controlled lifetimes,
-and can require authentication before button actions. An old card cannot change
-the preferences of a newer track: its intent carries the track ID. The extension
-identifier is `net.arkpedia.mobile.controls` and must be signed with the app.
+The system chooses its icon and placement for the Favourite/Like command (currently
+shown as a star); apps cannot replace that glyph with a custom heart. Version 0.3
+removes the companion Live Activity and its widget extension, so no extra black
+card appears. Startup dismisses an activity left by 0.2. The ActivityAttributes
+schema and Info.plist support flag remain only for that migration; no new activity
+is requested. Block remains available in Arkpedia and on Android.
 
 Favourite toggles the website's existing favourites. Block toggles **Don't autoplay**:
 explicitly chosen/queued songs are still playable. Blocking an automatically
@@ -48,15 +49,15 @@ does not supply browser Web Audio samples for the spectrum visualization.
 ## Validation and distribution
 
 GitHub Actions compiles the Android APK, runs Android lint, and archives the iOS
-app with its widget extension. The website's tests cover queue ordering,
+app. The website's tests cover queue ordering,
 YouTube boundaries, idempotent preference edits, stale responses, pause/resume,
 background song changes and reload restoration using a simulated native bridge.
 Those checks do not constitute physical-device playback tests.
 
 Before broader distribution, use signed device builds to check screen locking,
 several automatic track transitions, each action, headphone/Bluetooth routes,
-interruptions, native-to-YouTube handoff, process termination, Live Activity
-authorization/lifetime and signed extension intents. Compile-only and simulated
+interruptions, native-to-YouTube handoff, process termination, and dismissal of
+a companion card left by an older build. Compile-only and simulated
 bridge evidence cannot establish those OS-level outcomes.
 
 Node 24 is the development/CI runtime. Checkout, setup-node and artifact upload use
