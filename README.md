@@ -31,7 +31,7 @@ app. For a signed build, follow the Xcode steps below.
 
 ## Develop
 
-Use Node 22 or newer, then:
+Use Node 24 LTS, then:
 
 ```sh
 npm ci
@@ -71,9 +71,10 @@ npm run sync:ios
 npm run open:ios
 ```
 
-1. In Xcode, select the **App** target, then **Signing & Capabilities**. Select your
+1. In Xcode, select the **App** and **ArkpediaControls** targets, then **Signing & Capabilities**. Select your
    Apple team and enable automatic signing. Register `net.arkpedia.mobile` with that
-   team, or update the identifier consistently if it is unavailable.
+   team, and register `net.arkpedia.mobile.controls` for the companion extension,
+   or update both identifiers consistently if they are unavailable.
 2. Increase Version/Build as needed. Select a generic iOS device destination and
    choose **Product → Archive**.
 3. In Organizer, choose **Distribute App** and the appropriate method. Export the
@@ -90,12 +91,13 @@ This is a web-wrapper prototype, not an offline/native rewrite. Capacitor docume
 model; this project intentionally uses it for the requested live-site wrapper. The
 site's origin can interact with Capacitor's built-in bridge, so keep that origin
 trusted, do not broaden `allowNavigation`, and review any future native plugin.
-No optional native plugins are installed.
+The app includes a first-party `ArkpediaAudio` bridge. See [native playback](docs/native-audio.md)
+for its origin restriction, synchronization contract and remaining device checks.
 
 External navigation uses Capacitor's default browser handling. Google/Discord OAuth
 needs a real-device check: embedded browsers may reject sign-in, and system-browser
 sessions do not automatically transfer into the app. No native OAuth handoff or
-deep-link login callback is implemented. Background music, file import/export,
+deep-link login callback is implemented. Native background music, file import/export,
 downloads, and pop-up behavior also need device verification. Store approval is not
 established by a successful build; the current app retains the template launcher
 and splash artwork pending branded assets.
