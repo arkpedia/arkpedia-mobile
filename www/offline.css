@@ -1,0 +1,26 @@
+/* Offline subset of Arkpedia styles/core/shared.css tokens (2026-11-11).
+   Kept local so recovery does not depend on the website or downloaded fonts. */
+:root {
+  font-family: system-ui, sans-serif;
+  color-scheme: dark;
+  --bg: #0f151b;
+  --text: #bcc8cf;
+  --teal: #5fd9c6;
+  --control-border: rgba(255, 255, 255, 0.25);
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #f1f3f5;
+    --text: #26333c;
+    --teal: #07695a;
+    --control-border: #98a3ab;
+  }
+}
+body { margin: 0; min-height: 100svh; display: grid; place-items: center; background: var(--bg); color: var(--text); }
+main { max-width: 28rem; padding: 2rem; overflow-wrap: anywhere; }
+h1 { font-size: 1.6rem; color: var(--teal); }
+p { line-height: 1.6; }
+a { display: inline-flex; align-items: center; box-sizing: border-box; min-height: 44px; padding: .6rem 1rem; border: 1px solid var(--control-border); border-radius: 2px; color: var(--text); text-decoration: none; font-weight: 600; }
+a:hover { border-color: var(--teal); color: var(--teal); }
+a:focus-visible { outline: 2px solid var(--teal); outline-offset: 4px; }
