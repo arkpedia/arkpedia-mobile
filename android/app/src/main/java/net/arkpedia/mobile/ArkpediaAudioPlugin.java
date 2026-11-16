@@ -3,6 +3,7 @@ package net.arkpedia.mobile;
 import android.content.*;
 import android.net.Uri;
 import android.os.IBinder;
+import androidx.lifecycle.Lifecycle;
 import com.getcapacitor.*;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.util.ArrayList;
@@ -16,7 +17,6 @@ public class ArkpediaAudioPlugin extends Plugin {
     private AudioService service;
     private final List<Runnable> waiting = new ArrayList<>();
     private boolean bound;
-    private boolean foreground;
     private final Consumer<JSObject> listener = state -> notifyListeners("state", state);
     private final ServiceConnection connection = new ServiceConnection() {
         public void onServiceConnected(ComponentName name, IBinder binder) {
@@ -50,12 +50,13 @@ public class ArkpediaAudioPlugin extends Plugin {
         });
     }
     @PluginMethod public void getState(PluginCall call) { run(call, service -> {}); }
-    @PluginMethod public void getSpectrum(PluginCall call) { answer(call, service -> service.spectrum(foreground)); }
+    @PluginMethod public void getSpectrum(PluginCall call) {
+        // Only a visible, resumed app draws the plot; anything else stops the capture.
+        answer(call, service -> service.spectrum(getActivity().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)));
+    }
     @PluginMethod public void configure(PluginCall call) { run(call, service -> service.configure(call.getData())); }
     @PluginMethod public void loadTrack(PluginCall call) { run(call, service -> service.loadTrack(call.getData())); }
     @PluginMethod public void command(PluginCall call) { run(call, service -> service.command(call.getData())); }
-    @Override protected void handleOnResume() { foreground = true; }
-    @Override protected void handleOnPause() { foreground = false; }
     @Override protected void handleOnDestroy() {
         if (service != null) service.listeners.remove(listener);
         if (bound) getContext().unbindService(connection);
