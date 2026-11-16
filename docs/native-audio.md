@@ -1,4 +1,4 @@
-# Background playback and lock-screen controls (0.3.1)
+# Background playback and lock-screen controls (0.4.0)
 
 This app release pairs with the native-audio adapter in `arkpedia/arkpedia`.
 Older website releases still use the web player; the mobile bridge alone does not
@@ -43,17 +43,39 @@ increasing revision. Website snapshots older than that revision cannot overwrite
 them. The website applies edits to its existing local storage and acknowledges
 them on its next configuration. Per-session sequence numbers reject delayed
 playback responses. Returning to the page or reloading reconciles the current
-native song and position instead of starting another stream. On iOS 0.3.1+, an optional `getSpectrum` method supplies 48 real frequency-band
-levels to the foreground website. A pass-through AVPlayer audio tap copies PCM
-into bounded buffers; FFT work runs outside the audio callback and uses separate
-stereo channels. Analysis stops when the page no longer requests it, and stale or
-wrong-track samples are not displayed. The existing player remains the only audio
-stream. Android and older iOS builds report spectrum unavailable; YouTube does
-not expose samples. Pause, seek, interruptions and track changes clear the capture.
+native song and position instead of starting another stream.
 
-The iOS build also runs generated-tone tests for frequency placement, calibrated
-dBFS, silence, anti-phase stereo, planar/interleaved PCM, stale seek data and reset.
-These tests and an archive do not replace a physical iPhone listening test.
+## Spectrum visualizer
+
+An optional `getSpectrum` method supplies 48 real frequency-band levels to the
+foreground website (iOS since 0.3.1, Android since 0.4.0). Builds without it report
+the spectrum unavailable, and YouTube does not expose samples. The existing player
+remains the only audio stream and no microphone permission is involved.
+
+- **iOS** copies PCM from a pass-through AVPlayer audio tap
+  (`NativeSpectrumCapture.swift`).
+- **Android** wraps ExoPlayer's audio output in a forwarding sink that copies the
+  decoded PCM (`SpectrumSink.java`, `SpectrumCapture.java`).
+
+Both players hand audio over before it is heard: about 0.3 s on the iOS Simulator,
+and the length of the audio buffer on Android. The capture therefore keeps a 65,536
+sample ring and analyses the 8,192 samples that end at the playhead, so the bars
+move with the sound. Copying happens only while the page keeps asking; FFT work
+runs on the request, never in the audio callback. Samples from another position,
+track or a paused player are not displayed, and pause, seek, interruptions and
+track changes clear the capture.
+
+Levels are on the website's own scale: the Web Audio analyser's Blackman window,
+its division by the transform size, its 0.68 frame smoothing, and −90 to −18 dB
+mapped to 0–255. A full-scale sine therefore reads −13.6 dB, as it does in a
+browser. Version 0.3.1 measured true dBFS without smoothing, which pinned most bars
+of loud music to the top of the plot.
+
+`tests/ios/SpectrumTests.swift` and `android/app/src/test/.../SpectrumTest.java`
+run the same generated-tone checks in CI: frequency placement, level, headroom,
+smoothing, silence, anti-phase stereo, each PCM layout, playhead sync, stale seek
+data and reset. The iOS path is also checked in the iOS Simulator against the
+live site. None of this replaces listening on a physical iPhone and Android phone.
 
 ## Validation and distribution
 

@@ -8,6 +8,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /** Only the configured production page can control the app's audio service. */
 @CapacitorPlugin(name = "ArkpediaAudio")
@@ -15,6 +16,7 @@ public class ArkpediaAudioPlugin extends Plugin {
     private AudioService service;
     private final List<Runnable> waiting = new ArrayList<>();
     private boolean bound;
+    private boolean foreground;
     private final Consumer<JSObject> listener = state -> notifyListeners("state", state);
     private final ServiceConnection connection = new ServiceConnection() {
         public void onServiceConnected(ComponentName name, IBinder binder) {
@@ -26,13 +28,16 @@ public class ArkpediaAudioPlugin extends Plugin {
         public void onServiceDisconnected(ComponentName name) { service = null; }
     };
     private void run(PluginCall call, Consumer<AudioService> action) {
+        answer(call, service -> { action.accept(service); return service.state(); });
+    }
+    private void answer(PluginCall call, Function<AudioService, JSObject> action) {
         getActivity().runOnUiThread(() -> {
             Uri page = Uri.parse(bridge.getWebView().getUrl() == null ? "" : bridge.getWebView().getUrl());
             if (!"https".equals(page.getScheme()) || !"www.arkpedia.net".equals(page.getHost()) || (page.getPort() != -1 && page.getPort() != 443)) {
                 call.reject("Audio is available only to Arkpedia production"); return;
             }
             Runnable task = () -> {
-                try { action.accept(service); call.resolve(service.state()); }
+                try { call.resolve(action.apply(service)); }
                 catch (Exception error) { call.reject("Audio command failed", error); }
             };
             if (service != null) { task.run(); return; }
@@ -45,9 +50,12 @@ public class ArkpediaAudioPlugin extends Plugin {
         });
     }
     @PluginMethod public void getState(PluginCall call) { run(call, service -> {}); }
+    @PluginMethod public void getSpectrum(PluginCall call) { answer(call, service -> service.spectrum(foreground)); }
     @PluginMethod public void configure(PluginCall call) { run(call, service -> service.configure(call.getData())); }
     @PluginMethod public void loadTrack(PluginCall call) { run(call, service -> service.loadTrack(call.getData())); }
     @PluginMethod public void command(PluginCall call) { run(call, service -> service.command(call.getData())); }
+    @Override protected void handleOnResume() { foreground = true; }
+    @Override protected void handleOnPause() { foreground = false; }
     @Override protected void handleOnDestroy() {
         if (service != null) service.listeners.remove(listener);
         if (bound) getContext().unbindService(connection);

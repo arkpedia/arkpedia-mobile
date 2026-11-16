@@ -3,10 +3,13 @@ import MediaToolbox
 
 /// A pass-through AVPlayer tap. Copy PCM only while the foreground visualizer
 /// requests it; never allocate, run an FFT, or wait for a lock on the audio thread.
+/// The tap receives audio ahead of the speakers (about 0.3 s, more on some routes),
+/// so the ring keeps enough history to analyse the samples at the playhead itself.
 final class NativeSpectrumCapture {
+    static let capacity = 65536
     private let lock = NSLock()
-    private var left = [Float](repeating: 0, count: SpectrumAnalyzer.size)
-    private var right = [Float](repeating: 0, count: SpectrumAnalyzer.size)
+    private var left = [Float](repeating: 0, count: capacity)
+    private var right = [Float](repeating: 0, count: capacity)
     private var position = 0, filled = 0, channels = 0
     private var format = AudioStreamBasicDescription()
     private var requested: TimeInterval = -.infinity
@@ -31,6 +34,8 @@ final class NativeSpectrumCapture {
         defer { lock.unlock() }
         let now = ProcessInfo.processInfo.systemUptime
         guard channels > 0, now - requested < 0.5 else { filled = 0; return }
+        // Audio that does not continue the ring (a seek the reset has not reached) restarts it.
+        if endTime.isFinite, range.start.seconds.isFinite, abs(range.start.seconds - endTime) > 0.05 { filled = 0 }
         let list = UnsafeMutableAudioBufferListPointer(buffers)
         let float = format.mFormatFlags & kAudioFormatFlagIsFloat != 0
         let bytes = float ? 4 : 2
@@ -51,8 +56,8 @@ final class NativeSpectrumCapture {
                 if channel >= channels { break }
             }
             guard channel == channels else { filled = 0; return }
-            position = (position + 1) % SpectrumAnalyzer.size
-            filled = min(SpectrumAnalyzer.size, filled + 1)
+            position = (position + 1) % Self.capacity
+            filled = min(Self.capacity, filled + 1)
         }
         updated = now
         endTime = CMTimeRangeGetEnd(range).seconds
@@ -62,10 +67,22 @@ final class NativeSpectrumCapture {
         defer { lock.unlock() }
         let now = ProcessInfo.processInfo.systemUptime
         requested = now
-        guard filled == SpectrumAnalyzer.size, now - updated < 0.5,
-              !endTime.isFinite || abs(endTime - seconds) < 0.5 else { return nil }
-        func ordered(_ ring: [Float]) -> [Float] { Array(ring[position...]) + Array(ring[..<position]) }
-        return (channels == 2 ? [ordered(left), ordered(right)] : [ordered(left)], format.mSampleRate)
+        let size = SpectrumAnalyzer.size, rate = format.mSampleRate
+        guard filled >= size, now - updated < 1, rate > 0 else { return nil }
+        // Step back from the newest sample to the one now playing. Samples from another
+        // position (before a seek) are never shown; a lead beyond the ring uses its oldest window.
+        var ahead = 0
+        if endTime.isFinite {
+            let lead = (endTime - seconds) * rate
+            guard lead.isFinite, lead > -0.25 * rate, lead < Double(Self.capacity) + 0.5 * rate else { return nil }
+            ahead = min(max(0, Int(lead)), filled - size)
+        }
+        let start = ((position - ahead - size) % Self.capacity + Self.capacity) % Self.capacity
+        func window(_ ring: [Float]) -> [Float] {
+            start + size <= Self.capacity ? Array(ring[start..<start + size])
+                : Array(ring[start...]) + Array(ring[..<(start + size - Self.capacity)])
+        }
+        return (channels == 2 ? [window(left), window(right)] : [window(left)], rate)
     }
 
     func tap() -> MTAudioProcessingTap? {
