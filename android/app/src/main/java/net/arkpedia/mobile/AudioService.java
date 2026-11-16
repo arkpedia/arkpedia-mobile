@@ -1,12 +1,15 @@
 package net.arkpedia.mobile;
 
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.*;
 import androidx.annotation.Nullable;
 import androidx.media3.common.*;
+import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.audio.AudioSink;
 import androidx.media3.session.*;
 import com.getcapacitor.JSObject;
 import com.google.common.collect.ImmutableList;
@@ -33,6 +36,8 @@ public class AudioService extends MediaSessionService {
     private long sequence;
     private final String sessionId = UUID.randomUUID().toString();
     private String error = "";
+    private final SpectrumCapture capture = new SpectrumCapture();
+    private final SpectrumAnalyzer analyzer = new SpectrumAnalyzer();
     private final Runnable tick = new Runnable() {
         public void run() { emit(); handler.postDelayed(this, 1000); }
     };
@@ -49,7 +54,13 @@ public class AudioService extends MediaSessionService {
             changes = saved.optJSONObject("changes") == null ? changes : saved.optJSONObject("changes");
             revision = saved.optLong("revision");
         } catch (JSONException ignored) {}
-        player = new ExoPlayer.Builder(this).build();
+        // The visualizer reads a copy of the decoded PCM on its way to the audio output.
+        player = new ExoPlayer.Builder(this, new DefaultRenderersFactory(this) {
+            @Nullable @Override protected AudioSink buildAudioSink(Context context, boolean enableFloatOutput, boolean enableAudioTrackPlaybackParams) {
+                AudioSink sink = super.buildAudioSink(context, enableFloatOutput, enableAudioTrackPlaybackParams);
+                return sink == null ? null : new SpectrumSink(sink, capture);
+            }
+        }).build();
         player.setAudioAttributes(new AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true);
         player.setHandleAudioBecomingNoisy(true);
         player.setWakeMode(C.WAKE_MODE_LOCAL);
@@ -197,6 +208,16 @@ public class AudioService extends MediaSessionService {
         result.put("playing", player != null && player.isPlaying());
         result.put("buffering", player != null && player.getPlayWhenReady() && player.getPlaybackState() == Player.STATE_BUFFERING);
         result.put("revision", revision); result.put("changes", changes); result.put("error", error);
+        return result;
+    }
+    /** 48 real frequency-band levels for the foreground visualizer, or unavailable. */
+    JSObject spectrum(boolean foreground) {
+        float[][] samples = foreground && player != null && player.isPlaying() ? capture.snapshot(System.nanoTime()) : null;
+        JSONArray bands = new JSONArray();
+        if (samples == null) analyzer.reset();
+        else for (int level : SpectrumAnalyzer.bytes(analyzer.smoothed(analyzer.amplitudes(samples, capture.sampleRate())))) bands.put(level);
+        JSObject result = new JSObject();
+        result.put("trackId", id()); result.put("available", samples != null); result.put("bands", bands);
         return result;
     }
     private void emit() { for (Consumer<JSObject> listener : new ArrayList<>(listeners)) listener.accept(state()); }

@@ -244,10 +244,11 @@ final class NativeAudio {
     func spectrum() -> [String: Any] {
         guard UIApplication.shared.applicationState == .active, player.timeControlStatus == .playing,
               let analyzer, let samples = capture?.snapshot(at: player.currentTime().seconds) else {
+            analyzer?.reset()
             return ["trackId": id, "available": false, "bands": []]
         }
-        return ["trackId": id, "available": true,
-                "bands": analyzer.levels(channels: samples.channels, sampleRate: samples.sampleRate)]
+        let amplitudes = analyzer.amplitudes(channels: samples.channels, sampleRate: samples.sampleRate)
+        return ["trackId": id, "available": true, "bands": SpectrumAnalyzer.bytes(analyzer.smoothed(amplitudes))]
     }
     func state() -> [String: Any] {
         sequence += 1
